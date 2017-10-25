@@ -17,6 +17,10 @@ class Product(models.Model):
     in_stock = models.IntegerField()
 
 
+    def __str__(self):
+        return self.prod_name
+
+
 class Order(models.Model):
     order_id = models.AutoField(primary_key=True)
     cust_id = models.ForeignKey(Customer, on_delete=models.CASCADE)
