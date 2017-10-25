@@ -17,7 +17,8 @@ class Migration(migrations.Migration):
         migrations.CreateModel(
             name='Cart',
             fields=[
-                ('id', models.AutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('id', models.AutoField(auto_created=True,
+                                        primary_key=True, serialize=False, verbose_name='ID')),
                 ('quantity', models.IntegerField()),
             ],
         ),
@@ -36,7 +37,8 @@ class Migration(migrations.Migration):
                 ('order_id', models.AutoField(primary_key=True, serialize=False)),
                 ('po_number', models.CharField(max_length=50)),
                 ('order_date', models.CharField(max_length=50)),
-                ('cust_id', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='shopping_inventory.Customer')),
+                ('cust_id', models.ForeignKey(
+                    on_delete=django.db.models.deletion.CASCADE, to='shopping_inventory.Customer')),
             ],
         ),
         migrations.CreateModel(
@@ -52,11 +54,13 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name='cart',
             name='cust_id',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='shopping_inventory.Customer'),
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to='shopping_inventory.Customer'),
         ),
         migrations.AddField(
             model_name='cart',
             name='prod_id',
-            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='shopping_inventory.Product'),
+            field=models.ForeignKey(
+                on_delete=django.db.models.deletion.CASCADE, to='shopping_inventory.Product'),
         ),
     ]
