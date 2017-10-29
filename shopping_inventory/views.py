@@ -18,7 +18,8 @@ class CustomerAPIView(APIView):
     def get(self, request, name, format=None):
         try:
              Customer.objects.get(first_name=name)
-             customer = Customer.objects.all().filter(first_name=name)
+             #__iexact case insensitive
+             customer = Customer.objects.all().filter(first_name__iexact=name)
              serializer = CustomerSerializer(customer, many = True)
              return Response(serializer.data)
         except Customer.DoesNotExist:
@@ -32,21 +33,15 @@ class CustomerAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def put(self, request, format=None):
+
         req = json.loads( request.body.decode('utf-8') )
         if ('cust_id' in req) and ('first_name' in req) and ('last_name' in req):
-            customer = Customer.objects.filter(cust_id=req["cust_id"])
-            customer.first_name = req["first_name"]
-            customer.last_name = req["last_name"]
-            serializer = CustomerSerializer(customer, data=req, many=True)
-            if serializer.is_valid():            
-                print("Tha")
-                serializer.save()
-                return Response(serializer.data)
-            
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            #        obj = get_object_or_404(MyModel.objects.select_for_update(), pk=pk)
+            customer = Customer.objects.select_for_update().filter(cust_id=req["cust_id"]).update(first_name = req["first_name"], last_name = req["last_name"])
+        
+            return Response(customer, status=status.HTTP_400_BAD_REQUEST)
 
-        else:
-            pass    
+        
         return Response(req, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, name, format=None):
