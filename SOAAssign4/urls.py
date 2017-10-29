@@ -12,10 +12,18 @@ Class-based views
 Including another URLconf
     1. Import the include() function: from django.conf.urls import url, include
     2. Add a URL to urlpatterns:  url(r'^blog/', include('blog.urls'))
+      url(r'^product/(?P<prodName>[\w|\W]+)$', views.product_info),
+    url(r'^order/(?P<first>[0-9]+)$', views.customer_info),
 """
 from django.conf.urls import url
 from django.contrib import admin
+from rest_framework.urlpatterns import format_suffix_patterns
+from shopping_inventory import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+    url(r'^customer/$', views.CustomerAPIView.as_view(),name ='customer'),
+    url(r'^customer/(?P<name>\w+)/$', views.CustomerAPIView.as_view()),
 ]
+
+urlpatterns = format_suffix_patterns(urlpatterns)
