@@ -8,6 +8,7 @@ from .serializers import CustomerSerializer, ProductSerializer
 from .models import Customer, Product
 from django.http import Http404
 import json
+import re
 # Create your views here.
 
 
@@ -15,6 +16,8 @@ class CustomerAPIView(APIView):
     """
     Retrieve, update or delete a customer.
     """
+    #regex for phone number
+    r = re.compile(r'\b\d{3}[-.]?\d{3}[-]\d{4}\b')
     def get(self, request, name, format=None):
         try:
              Customer.objects.get(first_name=name)
@@ -28,20 +31,32 @@ class CustomerAPIView(APIView):
     def post(self, request, format=None):
         serializer = CustomerSerializer(data=request.data)
         if serializer.is_valid():
-            instance = serializer.save()
+            if('cust_id' in request.data): 
+                return Response({'error': 'no specify custID'}, status=status.HTTP_400_BAD_REQUEST)
+            elif(self.r.match(serializer.validated_data['phone_number'])):
+                instance = serializer.save()
+            else:
+                return Response({'error': 'phone not correct'}, status=status.HTTP_400_BAD_REQUEST)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
     def put(self, request, format=None):
-
         req = json.loads( request.body.decode('utf-8') )
         if ('cust_id' in req) and ('first_name' in req) and ('last_name' in req):
-            #        obj = get_object_or_404(MyModel.objects.select_for_update(), pk=pk)
             customer = Customer.objects.select_for_update().filter(cust_id=req["cust_id"]).update(first_name = req["first_name"], last_name = req["last_name"])
-        
-            return Response(customer, status=status.HTTP_400_BAD_REQUEST)
+            if(customer <= 0):
+                return Response(customer.data)
+        else:
+            errorMessage = ""
+            if ('cust_id' not in req):
+                errorMessage += "no cust_id "
+            if ('first_name' not in req):
+                errorMessage +=  "no first_name"
+            if ('last_name' not in req):
+                errorMessage +=  "no last_name"
 
-        
+            return Response({'error': errorMessage}, status=status.HTTP_400_BAD_REQUEST)
+
         return Response(req, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, name, format=None):
@@ -51,10 +66,37 @@ class CustomerAPIView(APIView):
     
  
 
+class ProductAPIView(APIView):
+    """
+    Retrieve, update or delete a product.
+    """
+    def get(self, request, prodName, format=None):
+        try:
+             Product.objects.get(prod_name=prodName)
+             #__iexact case insensitive
+             product = Product.objects.all().filter(prod_name__iexact=prodName)
+             serializer = ProductSerializer(product, many = True)
+             return Response(serializer.data)
+        except Product.DoesNotExist:
+            raise Http404 
 
-@api_view(['GET', 'POST'])
-def product_info(request, prodName):
-     if request.method == 'GET':
-        product = Product.objects.all().filter(prod_name=prodName)
-        serializer = ProductSerializer(product, many = True)
-        return Response(serializer.data)
+    def get(self, request, soldout, format=None):
+        try:
+            if soldout.lower() == "no":
+                product = Product.objects.all().filter(in_stock__gt=0)
+                serializer = ProductSerializer(product, many = True)
+                return Response(serializer.data)
+            elif soldout.lower() == "yes":
+                product = Product.objects.all().filter(in_stock__lte=0)
+                serializer = ProductSerializer(product, many = True)
+                return Response(serializer.data)
+            else:
+                raise Product.DoesNotExist
+        except Product.DoesNotExist:
+            raise Http404 
+    # def post(self, request, format=None):
+    #     serializer = ProductSerializer(data=request.data)
+    #     if serializer.is_valid():
+    #         instance = serializer.save()
+    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
+    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
