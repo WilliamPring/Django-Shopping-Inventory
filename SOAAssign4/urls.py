@@ -26,6 +26,8 @@ urlpatterns = [
     url(r'^customer/(?P<name>\w+)/$', views.CustomerAPIView.as_view()),
     url(r'^product/(?P<prodName>\w+)/$', views.ProductAPIView.as_view()),
     url(r'^product/soldout/(?P<soldout>\w+)/$', views.ProductAPIView.as_view()),
+    url(r'^order/(?P<orderID>\w+)/$', views.OrderAPIView.as_view()),
+    url(r'^order/$', views.OrderAPIView.as_view(),name ='order'),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

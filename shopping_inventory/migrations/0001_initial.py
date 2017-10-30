@@ -35,7 +35,7 @@ class Migration(migrations.Migration):
             name='Order',
             fields=[
                 ('order_id', models.AutoField(primary_key=True, serialize=False)),
-                ('po_number', models.CharField(max_length=50)),
+                ('po_number', models.CharField(max_length=50, blank=True)),
                 ('order_date', models.CharField(max_length=50)),
                 ('cust_id', models.ForeignKey(
                     on_delete=django.db.models.deletion.CASCADE, to='shopping_inventory.Customer')),

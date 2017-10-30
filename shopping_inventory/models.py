@@ -24,8 +24,10 @@ class Product(models.Model):
 class Order(models.Model):
     order_id = models.AutoField(primary_key=True)
     cust_id = models.ForeignKey(Customer, on_delete=models.CASCADE)
-    po_number = models.CharField(max_length=50)
+    po_number = models.CharField(max_length=50, blank=True)
     order_date = models.DateField()
+    def __str__(self):
+        return str(self.order_id)
 
 class Cart(models.Model):
     cust_id = models.ForeignKey(Customer, on_delete=models.CASCADE)

@@ -4,12 +4,30 @@ from rest_framework.views import APIView
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .serializers import CustomerSerializer, ProductSerializer
-from .models import Customer, Product
+from .serializers import CustomerSerializer, ProductSerializer, OrderSerializer
+from .models import Customer, Product, Order
 from django.http import Http404
 import json
 import re
 # Create your views here.
+
+
+class OrderAPIView(APIView):
+    def get(self, request, orderID, format=None):
+        try:
+             Order.objects.get(order_id=orderID)
+             #__iexact case insensitive
+             order = Order.objects.all().filter(order_id=orderID)
+             serializer = OrderSerializer(order, many = True)
+             return Response(serializer.data)
+        except Order.DoesNotExist:
+            raise Http404
+    def post(self, request, format=None):
+        serializer = OrderSerializer(data=request.data)
+        if serializer.is_valid():
+            instance = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class CustomerAPIView(APIView):
@@ -23,6 +41,7 @@ class CustomerAPIView(APIView):
              Customer.objects.get(first_name=name)
              #__iexact case insensitive
              customer = Customer.objects.all().filter(first_name__iexact=name)
+             #expecting many
              serializer = CustomerSerializer(customer, many = True)
              return Response(serializer.data)
         except Customer.DoesNotExist:
