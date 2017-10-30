@@ -19,16 +19,35 @@ class OrderAPIView(APIView):
              #__iexact case insensitive
              order = Order.objects.all().filter(order_id=orderID)
              serializer = OrderSerializer(order, many = True)
-             return Response(serializer.data)
+             return Response(serializer.data, status=status.HTTP_200_OK)
         except Order.DoesNotExist:
             raise Http404
+
     def post(self, request, format=None):
         serializer = OrderSerializer(data=request.data)
         if serializer.is_valid():
             instance = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    #order update
+    def put(self, request, format=None):
+        try:
+            req = json.loads( request.body.decode('utf-8') )
+            if ('order_id' in req) and ('po_number' in req):
+                Order.objects.get(order_id=req['order_id'])
+                customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"])
+                if(customer <= 0):
+                    return Response(customer.data)
+                return Response(req, status=status.HTTP_200_OK)
+            else: 
+                errorMessage = ""
+                if ('order_id' not in req):
+                    errorMessage += "no order_id "
+                if ('po_number' not in req):
+                    errorMessage +=  "no po_number "
+        except Order.DoesNotExist:
+            raise Http404
+    
 
 class CustomerAPIView(APIView):
     """
@@ -73,17 +92,14 @@ class CustomerAPIView(APIView):
                 errorMessage +=  "no first_name"
             if ('last_name' not in req):
                 errorMessage +=  "no last_name"
-
             return Response({'error': errorMessage}, status=status.HTTP_400_BAD_REQUEST)
 
-        return Response(req, status=status.HTTP_400_BAD_REQUEST)
+        return Response(req, status=status.HTTP_200_OK)
 
     def delete(self, request, name, format=None):
         event = Customer.objects.get(last_name=name)
         event.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
- 
 
 class ProductAPIView(APIView):
     """
