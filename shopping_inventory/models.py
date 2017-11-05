@@ -32,10 +32,8 @@ class Order(models.Model):
 
     
 class Cart(models.Model):
-    class Meta:
-        unique_together = (('order_id', 'prod_id'),)
-    order_id = models.ForeignKey(Order, on_delete=models.CASCADE, null=True)
     prod_id = models.ForeignKey(Product, on_delete=models.CASCADE)
+    order_id = models.ForeignKey(Order, on_delete=models.CASCADE, null=True)
     quantity = models.IntegerField()
     def __str__(self):
-        return str(self.prod_id + " " + self.quantity)
+        return str(self.prod_id)

@@ -15,14 +15,13 @@ import re
 class CartAPIView(APIView):
     def get(self, request, prodID, format=None):
         try:
-            Cart.objects.get(prod_id=prodID)
+            Cart.objects.filter(prod_id=prodID)
             cart = Cart.objects.all().filter(prod_id=prodID)
+
             serializer = CartSerializer(cart, many = True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Cart.DoesNotExist:
             raise Http404
-
-
 
 class OrderAPIView(APIView):
     def get(self, request, orderID, format=None):
