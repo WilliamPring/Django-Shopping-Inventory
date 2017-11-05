@@ -17,8 +17,8 @@ class CartAPIView(APIView):
         try:
             Cart.objects.filter(prod_id=prodID)
             cart = Cart.objects.all().filter(prod_id=prodID)
-
             serializer = CartSerializer(cart, many = True)
+           
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Cart.DoesNotExist:
             raise Http404
