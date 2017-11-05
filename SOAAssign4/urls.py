@@ -28,6 +28,8 @@ urlpatterns = [
     url(r'^product/soldout/(?P<soldout>\w+)/$', views.ProductAPIView.as_view()),
     url(r'^order/(?P<orderID>\w+)/$', views.OrderAPIView.as_view()),
     url(r'^order/$', views.OrderAPIView.as_view(),name ='order'),
+    url(r'^cart/$', views.CartAPIView.as_view(),name ='cart'),
+    url(r'^cart/(?P<prodID>\w+)/$', views.CartAPIView.as_view()),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)
