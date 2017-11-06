@@ -18,10 +18,16 @@ class CartAPIView(APIView):
             Cart.objects.filter(prod_id=prodID)
             cart = Cart.objects.all().filter(prod_id=prodID)
             serializer = CartSerializer(cart, many = True)
-           
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Cart.DoesNotExist:
             raise Http404
+
+    def post(self, request, format=None):
+        serializer = CartSerializer(data=request.data)
+        if serializer.is_valid():
+            instance = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class OrderAPIView(APIView):
     def get(self, request, orderID, format=None):
