@@ -189,13 +189,18 @@ class CustomerOrderPoAPIView(APIView):
     def get(self, request, name, poName=None, first=True, format=None):
         try:
             if first:
-                Customer.objects.get(first_name=name)
+                #Customer.objects.get(first_name=name)
                 customer = Customer.objects.all().filter(first_name=name)
             else:
-                Customer.objects.get(last_name=name)
+                #Customer.objects.get(last_name=name)
                 customer = Customer.objects.all().filter(last_name=name)
             #Order.objects.get(po_number=poName)
-            order = Order.objects.all().filter(po_number=poName)
+            if customer.count() < 1:
+                raise Http404
+            if poName is None:
+                # temp response
+                raise Http404
+            order = Order.objects.all().filter(po_number=poName, cust_id=customer[0].cust_id)
 
             serializer_customer = CustomerSerializer(customer, many=True)
             serializer_order = OrderSerializer(order, many=True)
