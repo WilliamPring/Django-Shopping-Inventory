@@ -41,10 +41,17 @@ class OrderAPIView(APIView):
             raise Http404
 
     def post(self, request, format=None):
-        serializer = OrderSerializer(data=request.data)
+        #regOrder = re.compile(r'^(0[1-9]|1[012][-](0[1-9]|[12][0-9]|3[01])[-]\d{2})$')
+        regOrder = re.compile(r'^((\d{4})[-](0[1-9]|1[012])[-](0[1-9]|[12][0-9]|3[01]))$')
+        serializer = OrderSerializer(data=request.data)        
         if serializer.is_valid():
-            instance = serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            if ('cust_id' not in request.data):
+                return Response({'error': 'no specify custID'}, status=status.HTTP_400_BAD_REQUEST)
+            elif (regOrder.match(str(serializer.validated_data['order_date']))):
+                instance = serializer.save()
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            else:
+                return Response({'error': 'date should be in MM-DD-YY format'}, status=status.HTTP_400_BAD_REQUEST)            
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     #order update
     def put(self, request, format=None):
@@ -152,3 +159,51 @@ class ProductAPIView(APIView):
     #         instance = serializer.save()
     #         return Response(serializer.data, status=status.HTTP_201_CREATED)
     #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class CustomerOrderAPIView(APIView):
+    """
+    Retrieve information about customer and order at the same time
+    """
+    def get(self, request, phone, orderDate, format=None):
+        try:
+            Customer.objects.get(phone_number=phone)
+            Order.objects.get(order_date=orderDate)
+
+            customer = Customer.objects.all().filter(phone_number=phone)
+            order = Order.objects.all().filter(order_date=orderDate)
+
+            serializer_customer = CustomerSerializer(customer, many= True)
+            serializer_order = OrderSerializer(order, many= True)   
+
+            serializer = [serializer_customer.data, serializer_order.data]
+            return Response(serializer)
+        except Customer.DoesNotExist:
+            raise Http404
+        except Order.DoesNotExist:
+            raise Http404
+
+class CustomerOrderPoAPIView(APIView):
+    """
+    Retrieve information about customer, order, and PO at the same time
+    """
+    def get(self, request, name, poName=None, first=True, format=None):
+        try:
+            if first:
+                Customer.objects.get(first_name=name)
+                customer = Customer.objects.all().filter(first_name=name)
+            else:
+                Customer.objects.get(last_name=name)
+                customer = Customer.objects.all().filter(last_name=name)
+            #Order.objects.get(po_number=poName)
+            order = Order.objects.all().filter(po_number=poName)
+
+            serializer_customer = CustomerSerializer(customer, many=True)
+            serializer_order = OrderSerializer(order, many=True)
+
+            serializer = [serializer_customer.data, serializer_order.data]
+            return Response(serializer)
+            #return Response()
+        except Customer.DoesNotExist:
+            raise Http404
+        except Order.DoesNotExist:
+            raise Http404
