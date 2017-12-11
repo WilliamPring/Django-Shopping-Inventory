@@ -25,6 +25,11 @@ class CartAPIView(APIView):
     def post(self, request, format=None):
         serializer = CartSerializer(data=request.data)
         if serializer.is_valid():
+            product = Product.objects.all().filter(prod_id=serializer.data['prod_id'])
+            if product.count() < 1:
+                return Response({'error': 'no such product'}, status=status.HTTP_404_NOT_FOUND)
+            if product[0].in_stock == 0:
+                return Response({'error': 'product is not in stock'}, status=status.HTTP_400_BAD_REQUEST)
             instance = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -47,6 +52,7 @@ class OrderAPIView(APIView):
         if serializer.is_valid():
             if ('cust_id' not in request.data):
                 return Response({'error': 'no specify custID'}, status=status.HTTP_400_BAD_REQUEST)
+            # this check is redundant, serializer.is_valid() is going to check for date format regardless
             elif (regOrder.match(str(serializer.validated_data['order_date']))):
                 instance = serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -70,8 +76,7 @@ class OrderAPIView(APIView):
                 if ('po_number' not in req):
                     errorMessage +=  "no po_number "
         except Order.DoesNotExist:
-            raise Http404
-    
+            raise Http404   
 
 class CustomerAPIView(APIView):
     """
@@ -98,7 +103,7 @@ class CustomerAPIView(APIView):
             elif(self.r.match(serializer.validated_data['phone_number'])):
                 instance = serializer.save()
             else:
-                return Response({'error': 'phone not correct'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'phone format is not correct'}, status=status.HTTP_400_BAD_REQUEST)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     
@@ -120,39 +125,61 @@ class CustomerAPIView(APIView):
 
         return Response(req, status=status.HTTP_200_OK)
 
-    def delete(self, request, name, format=None):
-        event = Customer.objects.get(last_name=name)
-        event.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+    def delete(self, request, name=None, format=None):
+        try:
+            lastName = request.data['last_name']
+            customer = Customer.objects.all().filter(last_name=lastName)
+            if customer.count() < 1:
+                return Response({'error': 'not customer found'}, status=status.HTTP_404_NOT_FOUND)
+            event = Customer.objects.get(last_name=lastName)
+            event.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except KeyError:
+            return Response({'error': 'not last name provided'}, status=status.HTTP_400_BAD_REQUEST)
 
 class ProductAPIView(APIView):
     """
     Retrieve, update or delete a product.
     """
-    def get(self, request, prodName, format=None):
+    def get(self, request, prodName=None, soldout=None, format=None):
         try:
-             Product.objects.get(prod_name=prodName)
-             #__iexact case insensitive
-             product = Product.objects.all().filter(prod_name__iexact=prodName)
-             serializer = ProductSerializer(product, many = True)
-             return Response(serializer.data)
+            if soldout is None and prodName is not None:
+                Product.objects.get(prod_name=prodName)
+                #__iexact case insensitive
+                product = Product.objects.all().filter(prod_name__iexact=prodName)
+                serializer = ProductSerializer(product, many = True)
+                return Response(serializer.data)
+            elif soldout is not None and prodName is None:
+                try:
+                    if soldout.lower() == "no":
+                        product = Product.objects.all().filter(in_stock__gt=0)
+                        serializer = ProductSerializer(product, many = True)
+                        return Response(serializer.data)
+                    elif soldout.lower() == "yes":
+                        product = Product.objects.all().filter(in_stock__lte=0)
+                        serializer = ProductSerializer(product, many = True)
+                        return Response(serializer.data)
+                    else:
+                        raise Product.DoesNotExist
+                except Product.DoesNotExist:
+                    raise Http404
         except Product.DoesNotExist:
             raise Http404 
 
-    def get(self, request, soldout, format=None):
-        try:
-            if soldout.lower() == "no":
-                product = Product.objects.all().filter(in_stock__gt=0)
-                serializer = ProductSerializer(product, many = True)
-                return Response(serializer.data)
-            elif soldout.lower() == "yes":
-                product = Product.objects.all().filter(in_stock__lte=0)
-                serializer = ProductSerializer(product, many = True)
-                return Response(serializer.data)
-            else:
-                raise Product.DoesNotExist
-        except Product.DoesNotExist:
-            raise Http404 
+    # def get(self, request, soldout, format=None):
+    #     try:
+    #         if soldout.lower() == "no":
+    #             product = Product.objects.all().filter(in_stock__gt=0)
+    #             serializer = ProductSerializer(product, many = True)
+    #             return Response(serializer.data)
+    #         elif soldout.lower() == "yes":
+    #             product = Product.objects.all().filter(in_stock__lte=0)
+    #             serializer = ProductSerializer(product, many = True)
+    #             return Response(serializer.data)
+    #         else:
+    #             raise Product.DoesNotExist
+    #     except Product.DoesNotExist:
+    #         raise Http404 
     # def post(self, request, format=None):
     #     serializer = ProductSerializer(data=request.data)
     #     if serializer.is_valid():
@@ -186,29 +213,42 @@ class CustomerOrderPoAPIView(APIView):
     """
     Retrieve information about customer, order, and PO at the same time
     """
-    def get(self, request, name, poName=None, first=True, format=None):
+
+    def calculatePO(self, customer, order):
+        carts = Cart.objects.all().filter(order_id=order[0].order_id)
+        total = 0.0
+        for element in carts:
+            product = element.prod_id
+            if product.in_stock > 0:
+                total += product.price * element.quantity
+        return total
+
+    def get(self, request, name, poName=None, orderDate=None, first=True, format=None):
         try:
             if first:
-                #Customer.objects.get(first_name=name)
                 customer = Customer.objects.all().filter(first_name=name)
             else:
-                #Customer.objects.get(last_name=name)
                 customer = Customer.objects.all().filter(last_name=name)
-            #Order.objects.get(po_number=poName)
+
             if customer.count() < 1:
-                raise Http404
-            if poName is None:
-                # temp response
-                raise Http404
-            order = Order.objects.all().filter(po_number=poName, cust_id=customer[0].cust_id)
+                return Response({'error': 'no such customer'}, status=status.HTTP_404_NOT_FOUND)
+
+            if poName is None and orderDate is not None:
+                order = Order.objects.all().filter(order_date=orderDate, cust_id=customer[0].cust_id)
+            else:
+                order = Order.objects.all().filter(po_number=poName, cust_id=customer[0].cust_id)
+
+            if order.count() < 1:
+                return Response({'error': 'no such order for the given customer'}, status=status.HTTP_404_NOT_FOUND)
 
             serializer_customer = CustomerSerializer(customer, many=True)
             serializer_order = OrderSerializer(order, many=True)
 
-            serializer = [serializer_customer.data, serializer_order.data]
+            poValue = self.calculatePO(customer, order)
+
+            serializer = [serializer_customer.data, serializer_order.data, [{'po' : poValue}]]
             return Response(serializer)
-            #return Response()
         except Customer.DoesNotExist:
-            raise Http404
+            return Response({'error': 'no customer'}, status=status.HTTP_404_NOT_FOUND)
         except Order.DoesNotExist:
-            raise Http404
+            return Response({'error': 'no order'}, status=status.HTTP_404_NOT_FOUND)

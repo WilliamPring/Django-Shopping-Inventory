@@ -24,13 +24,15 @@ urlpatterns = [
     url(r'^admin/', admin.site.urls),
     # customer
     url(r'^customer/$', views.CustomerAPIView.as_view(),name ='customer'),
+    #url(r'^customer/$', views.CustomerAPIView.as_view()),
     url(r'^customer/(?P<name>\w+)/$', views.CustomerAPIView.as_view()),
     # custome + order
     url(r'^customer-order/(?P<phone>(\w|[-])+)/(?P<orderDate>(\w|[-])+)/$', views.CustomerOrderAPIView.as_view()),
     # customer + order + po
     url(r'^customer-order-po/first/(?P<name>\w+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': True}),
     url(r'^customer-order-po/last/(?P<name>\w+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': False}),
-    url(r'^customer-order-po/(?P<name>\w+)/(?P<poName>(\w|[-])+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': True}),
+    url(r'^customer-order-po/po/(?P<name>\w+)/(?P<poName>(\w|[-])+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': True}),
+    url(r'^customer-order-po/order/(?P<name>\w+)/(?P<orderDate>(\w|[-])+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': False}),
     # product
     url(r'^product/(?P<prodName>\w+)/$', views.ProductAPIView.as_view()),
     url(r'^product/soldout/(?P<soldout>\w+)/$', views.ProductAPIView.as_view()),
