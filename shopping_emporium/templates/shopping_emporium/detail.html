@@ -1,0 +1,19 @@
+<form name="mainForm" method="post" action="">
+    Please generate a Purchase Order (P.O.)<input type="checkbox" name="poGenerate" value="Yes">
+    <br/>
+    <p>Customer</p>
+    <p>custID<input type="text" name="custID"> | firstName<input type="text" name="firstName"> | lastName<input type="text" name="lastName"> | phoneNumber<input type="text" name="phoneNumber"> XXX-XXX-XXXX </p>
+    <br/>
+    <p>Product</p>
+    <p>prodID<input type="text" name="prodID"> | prodName<input type="text" name="prodName"> | price<input type="text" name="price"> | prodWeight<input type="text" name="prodWeight">kg. | Sold Out<input type="text" name="soldOut"> </p>
+    <br/>
+    <p>Order</p>
+    <p>orderID<input type="text" name="orderID"> | custID<input type="text" name="custID"> | poNumber<input type="text" name="poNumber"> | orderDate<input type="text" name="orderDate"> YYYY-MM-DD</p>
+    <br/>
+    <p>Cart</p>
+    <p>orderID<input type="text" name="orderIDCart"> | prodID<input type="text" name="prodIDCart"> | quantity<input type="text" name="quantity"></p>
+    <br/>
+    <button type="button" onclick="location.href = '/emporium'">Go Back</button>
+    <button type="submit" onclick="window.location = '/inventory/customer/' + firstName.value; return false;">Execute</button>
+    <button type="button">Get me outta here !</button>
+</form>

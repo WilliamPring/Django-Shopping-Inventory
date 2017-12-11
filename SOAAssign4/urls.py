@@ -18,30 +18,37 @@ Including another URLconf
 from django.conf.urls import url
 from django.contrib import admin
 from rest_framework.urlpatterns import format_suffix_patterns
-from shopping_inventory import views
+from shopping_inventory import views as views
+from shopping_emporium import views as emporium_views
+#from shopping_emporium import views
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+    #********************************************* shopping inventory
     # customer
-    url(r'^customer/$', views.CustomerAPIView.as_view(),name ='customer'),
+    url(r'^inventory/customer/$', views.CustomerAPIView.as_view(),name ='customer'),
     #url(r'^customer/$', views.CustomerAPIView.as_view()),
-    url(r'^customer/(?P<name>\w+)/$', views.CustomerAPIView.as_view()),
+    url(r'^inventory/customer/(?P<name>\w+)/$', views.CustomerAPIView.as_view()),
     # custome + order
-    url(r'^customer-order/(?P<phone>(\w|[-])+)/(?P<orderDate>(\w|[-])+)/$', views.CustomerOrderAPIView.as_view()),
+    url(r'^inventory/customer-order/(?P<phone>(\w|[-])+)/(?P<orderDate>(\w|[-])+)/$', views.CustomerOrderAPIView.as_view()),
     # customer + order + po
-    url(r'^customer-order-po/first/(?P<name>\w+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': True}),
-    url(r'^customer-order-po/last/(?P<name>\w+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': False}),
-    url(r'^customer-order-po/po/(?P<name>\w+)/(?P<poName>(\w|[-])+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': True}),
-    url(r'^customer-order-po/order/(?P<name>\w+)/(?P<orderDate>(\w|[-])+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': False}),
+    url(r'^inventory/customer-order-po/first/(?P<name>\w+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': True}),
+    url(r'^inventory/customer-order-po/last/(?P<name>\w+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': False}),
+    url(r'^inventory/customer-order-po/po/(?P<name>\w+)/(?P<poName>(\w|[-])+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': True}),
+    url(r'^inventory/customer-order-po/order/(?P<name>\w+)/(?P<orderDate>(\w|[-])+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': False}),
     # product
-    url(r'^product/(?P<prodName>\w+)/$', views.ProductAPIView.as_view()),
-    url(r'^product/soldout/(?P<soldout>\w+)/$', views.ProductAPIView.as_view()),
+    url(r'^inventory/product/(?P<prodName>\w+)/$', views.ProductAPIView.as_view()),
+    url(r'^inventory/product/soldout/(?P<soldout>\w+)/$', views.ProductAPIView.as_view()),
     # order
-    url(r'^order/(?P<orderID>\w+)/$', views.OrderAPIView.as_view()),
-    url(r'^order/$', views.OrderAPIView.as_view(),name ='order'),
+    url(r'^inventory/order/(?P<orderID>\w+)/$', views.OrderAPIView.as_view()),
+    url(r'^inventory/order/$', views.OrderAPIView.as_view(),name ='order'),
     # cart
-    url(r'^cart/$', views.CartAPIView.as_view(),name ='cart'),
-    url(r'^cart/(?P<prodID>\w+)/$', views.CartAPIView.as_view()),
+    url(r'^inventory/cart/$', views.CartAPIView.as_view(),name ='cart'),
+    url(r'^inventory/cart/(?P<prodID>\w+)/$', views.CartAPIView.as_view()),
+    #********************************************** shopping emporium
+    url(r'^emporium/$', emporium_views.MainView),
+    url(r'^emporium/detail/(?P<type>\w+)/$', emporium_views.DetailView),
+    url(r'^emporium/view/$', emporium_views.ViewView),
 ]
 
 urlpatterns = format_suffix_patterns(urlpatterns)

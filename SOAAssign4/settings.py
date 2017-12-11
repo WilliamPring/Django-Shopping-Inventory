@@ -31,6 +31,7 @@ ALLOWED_HOSTS = []
 # Application definition
 
 INSTALLED_APPS = [
+    'shopping_emporium.apps.ShoppingEmporiumConfig',
     'shopping_inventory.apps.ShoppingInventoryConfig',
     'django.contrib.admin',
     'django.contrib.auth',
