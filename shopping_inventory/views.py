@@ -319,6 +319,81 @@ class CustomerOrderAPIView(APIView):
         except Order.DoesNotExist:
             return Response({'error':'no order found'}, status=status.HTTP_404_NOT_FOUND)
 
+class MultiViewAPIView(APIView):
+    def get(self, request, customerField=None, customerValue=None, productField=None, productValue=None, orderField=None, orderValue=None, cartField=None, cartValue=None, format=None):
+        print('Cust {} = {}'.format(customerField, customerValue))
+        print('Prod {} = {}'.format(productField, productValue))
+        print('Order {} = {}'.format(orderField, orderValue))
+        print('Cart {} = {}'.format(cartField, cartValue))
+        
+        customerEx = False
+        productEx = False
+        orderEx = False
+        cartEx = False
+
+        if customerField != '' and customerValue != '':
+            if customerField == 'cust_id':
+                customer = Customer.objects.all().filter(cust_id=customerValue)
+            elif customerField == 'first_name':
+                customer = Customer.objects.all().filter(first_name=customerValue)
+            elif customerField == 'last_name':
+                customer = Customer.objects.all().filter(last_name=customerValue)
+            elif customerField == 'phone_number':
+                customer = Customer.objects.all().filter(phone_number=customerValue)
+            else:
+                return Response({'error':'No such customer field'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if customer.count() < 1:
+                return Response({'error':'No such customer'}, status=status.HTTP_404_NOT_FOUND)
+            customerEx = True
+        if productField != '' and productValue != '':
+            if productField == 'prod_id':
+                product = Product.objects.all().filter(prod_id=productValue)
+            elif productField == 'prod_name':
+                product = Product.objects.all().filter(prod_name=productValue)
+            elif productField == 'price':
+                product = Product.objects.all().filter(price=productValue)
+            elif productField == 'prod_weight':
+                product = Product.objects.all().filter(prod_weight=productValue)
+            elif productField == 'in_stock':
+                product = Product.objects.all().filter(in_stock=productValue)
+            else:
+                return Response({'error':'No such product field'}, status=status.HTTP_400_BAD_REQUEST)
+            
+            if product.count() < 1:
+                return Response({'error':'No such product'}, status=status.HTTP_404_NOT_FOUND)
+            productEx = True
+        if orderField != '' and orderValue != '':
+            if orderField == 'order_id':
+                order = Order.objects.all().filter(order_id=orderValue)
+            elif orderField == 'cust_id':
+                order = Order.objects.all().filter(cust_id=orderValue)
+            elif orderField == 'po_number':
+                order = Order.objects.all().filter(po_number=orderValue)
+            elif orderField == 'order_date':
+                order = Order.objects.all().filter(order_date=orderValue)
+            else:
+                return Response({'error':'No such order field'}, status=status.HTTP_400_BAD_REQUEST)
+
+            if order.count() < 1:
+                return Response({'error':'No such order'}, status=status.HTTP_404_NOT_FOUND)
+            orderEx = True
+        if cartField != '' and cartValue != '':
+            pass
+
+        serializer = []
+        if customerEx:
+            serializerCustomer = CustomerSerializer(customer, many=True)
+            serializer.append({'customer': serializerCustomer.data})
+        if productEx:
+            serializerProduct = ProductSerializer(product, many=True)
+            serializer.append({'product': serializerProduct.data})
+        if orderEx:
+            serializerOreder = OrderSerializer(order, many=True)
+            serializer.append({'order': serializerOreder.data})
+
+        return Response(serializer)
+
 class CustomerOrderPoAPIView(APIView):
     """
     Retrieve information about customer, order, and PO at the same time

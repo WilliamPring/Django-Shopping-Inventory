@@ -26,6 +26,9 @@ urlpatterns = [
     url(r'^customer/$', views.CustomerAPIView.as_view(),name ='customer'),
     #url(r'^customer/$', views.CustomerAPIView.as_view()),
     url(r'^customer/(?P<name>\w+)/$', views.CustomerAPIView.as_view()),
+    # multi-view
+    url(r'^views/customer/(?P<customerField>.*)/(?P<customerValue>.*)/product/(?P<productField>.*)/(?P<productValue>.*)/order/(?P<orderField>.*)/(?P<orderValue>.*)/cart/(?P<cartField>.*)/(?P<cartValue>.*)/$', views.MultiViewAPIView.as_view()),
+    #url(r'^views/customer/(?P<customerField>)/(?P<customerValue>)/product/(?P<productField>)/(?P<productValue>)/order/(?P<orderField>)/(?P<orderValue>)/cart/(?P<cartField>)/(?P<cartValue>)/$', views.MultiViewAPIView.as_view()),
     # custome + order
     url(r'^customer-order/(?P<phone>(\w|[-])+)/(?P<orderDate>(\w|[-])+)/$', views.CustomerOrderAPIView.as_view()),
     # customer + order + po
