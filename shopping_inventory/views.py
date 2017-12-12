@@ -1,3 +1,10 @@
+# Assignment:   SOA #4
+# Date:         2017-12-11
+# Name:         Denys Politiuk, William Pring, Naween Mehanmal
+# Filename:     views.py
+# Description:  File that has logic for DB access and filtering that is used in REST APIs
+
+
 from django.http import HttpResponseRedirect, HttpResponse
 from django.urls import reverse
 from rest_framework.views import APIView
@@ -9,11 +16,7 @@ from .models import Customer, Product, Order, Cart
 from django.http import Http404
 import json
 import re
-#import logging
-# Create your views here.
 
-
-#logger = logging.getLogger(__name__)
 
 class CartAPIView(APIView):
     """
@@ -384,13 +387,16 @@ class MultiViewAPIView(APIView):
         serializer = []
         if customerEx:
             serializerCustomer = CustomerSerializer(customer, many=True)
-            serializer.append({'customer': serializerCustomer.data})
+            #serializer.append({'customer': serializerCustomer.data})
+            serializer.append(serializerCustomer.data)
         if productEx:
             serializerProduct = ProductSerializer(product, many=True)
-            serializer.append({'product': serializerProduct.data})
+            #serializer.append({'product': serializerProduct.data})
+            serializer.append(serializerProduct.data)
         if orderEx:
             serializerOreder = OrderSerializer(order, many=True)
-            serializer.append({'order': serializerOreder.data})
+            #serializer.append({'order': serializerOreder.data})
+            serializer.append(serializerOreder.data)
 
         return Response(serializer)
 

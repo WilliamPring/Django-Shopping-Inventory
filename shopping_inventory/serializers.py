@@ -1,3 +1,9 @@
+# Assignment:   SOA #4
+# Date:         2017-12-11
+# Name:         Denys Politiuk, William Pring, Naween Mehanmal
+# Filename:     serializers.py
+# Description:  File with serializers for database models
+
 from rest_framework import serializers
 from .models import Customer, Product, Order, Cart
 

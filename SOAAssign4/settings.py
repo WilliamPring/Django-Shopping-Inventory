@@ -1,3 +1,9 @@
+# Assignment:   SOA #4
+# Date:         2017-12-11
+# Name:         Denys Politiuk, William Pring, Naween Mehanmal
+# Filename:     settings.py
+# Description:  File with Django settings
+
 """
 Django settings for SOAAssign4 project.
 

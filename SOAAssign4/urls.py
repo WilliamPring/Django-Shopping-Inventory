@@ -1,3 +1,9 @@
+# Assignment:   SOA #4
+# Date:         2017-12-11
+# Name:         Denys Politiuk, William Pring, Naween Mehanmal
+# Filename:     urls.py
+# Description:  File with url parting and redirecting to a proper class in views.py
+
 """SOAAssign4 URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:

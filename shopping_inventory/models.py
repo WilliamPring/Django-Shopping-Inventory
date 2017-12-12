@@ -1,3 +1,9 @@
+# Assignment:   SOA #4
+# Date:         2017-12-11
+# Name:         Denys Politiuk, William Pring, Naween Mehanmal
+# Filename:     models.py
+# Description:  File with models that represend database tables
+
 from django.db import models
 from SOAAssign4 import settings
 
