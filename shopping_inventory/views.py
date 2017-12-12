@@ -324,20 +324,17 @@ class CustomerOrderPoAPIView(APIView):
     def calculatePO(self, customer, order):
         carts = Cart.objects.all().filter(order_id=order[0].order_id)
         total = 0.0
+        totalPiece = 0.0
+        totalWeight = 0
         for element in carts:
             product = element.prod_id
             if product.in_stock > 0:
                 total += product.price * element.quantity
-        return total
+                totalWeight += product.prod_weight * element.quantity
+                totalPiece += element.quantity
+        return total, totalPiece, totalWeight
 
-    #def get(self, request, name=None, poName=None, orderDate=None, first=True, format=None):
     def get(self, request, orderID=None, custID=None, lastName=None, firstName=None, poNumber=None, orderDate=None, format=None):
-        # print('order id >{}<'.format(orderID))
-        # print('cust id >{}<'.format(custID))
-        # print('last name >{}<'.format(lastName))
-        # print('first name >{}<'.format(firstName))
-        # print('po number >{}<'.format(poNumber))
-        # print('order date >{}<'.format(orderDate))
         try:
             if custID != '':
                 customer = Customer.objects.all().filter(cust_id=custID)
@@ -353,23 +350,45 @@ class CustomerOrderPoAPIView(APIView):
             if customer.count() < 1:
                 return Response({'error':'No customer with such parameters'}, status=status.HTTP_404_NOT_FOUND)
 
+            if custID == '':
+                custID = customer[0].cust_id
+
             if orderID !='':
-                order = Order.objects.all().filter(order_id=orderID)
+                order = Order.objects.all().filter(order_id=orderID, cust_id=custID)
             else:
                 if poNumber == '' and orderDate == '':
                     return Response({'error':'no order info provided'}, status=status.HTTP_400_BAD_REQUEST)
                 elif poNumber != '' and orderDate == '':
-                    order = Order.objects.all().filter(po_number=poNumber)
+                    order = Order.objects.all().filter(po_number=poNumber, cust_id=custID)
                 elif poNumber == '' and orderDate != '':
-                    order = Order.objects.all().filter(order_date=orderDate)
+                    order = Order.objects.all().filter(order_date=orderDate, cust_id=custID)
                 else:
-                    order = Order.objects.all().filter(order_date=orderDate, po_number=poNumber)
+                    order = Order.objects.all().filter(order_date=orderDate, po_number=poNumber, cust_id=custID)
             if order.count() < 1:
                 return Response({'error':'No order with such parameters'}, status=status.HTTP_404_NOT_FOUND)
 
+            product = Product.objects.none()
+            tempList = []
+            # bulding temp list with products from each cart
+            for oneOrder in order:
+                cart = Cart.objects.all().filter(order_id=oneOrder.order_id)
+                for oneCart in cart:
+                    tempList.append(oneCart.prod_id)
+            # adding all products from the temp list to an empty Query set of Products
+            products = product | tempList
+
             serializerCustomer = CustomerSerializer(customer, many=True)
             serializerOrder = OrderSerializer(order, many=True)
-            serializer = [serializerCustomer.data, serializerOrder.data]
+            serializerProduct = ProductSerializer(products, many=True)
+
+            poValue, poPiece, poWeight = self.calculatePO(customer, order)
+            measurementsList = []
+            measurementsList.append({'subtotal': poValue})
+            measurementsList.append({'tax': '13%'})
+            measurementsList.append({'total': poValue * 1.13})
+            measurementsList.append({'pieces': poPiece})
+            measurementsList.append({'weight': poValue})
+            serializer = [{'customer' :serializerCustomer.data}, {'order': serializerOrder.data}, {'products' : serializerProduct.data}, {'measurements': measurementsList}]
 
             return Response(serializer)
         except Customer.DoesNotExist:
