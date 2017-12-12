@@ -9,8 +9,11 @@ from .models import Customer, Product, Order, Cart
 from django.http import Http404
 import json
 import re
+#import logging
 # Create your views here.
 
+
+#logger = logging.getLogger(__name__)
 
 class CartAPIView(APIView):
     """
@@ -336,6 +339,8 @@ class CustomerOrderPoAPIView(APIView):
 
     def get(self, request, orderID=None, custID=None, lastName=None, firstName=None, poNumber=None, orderDate=None, format=None):
         try:
+            tax = '13'
+
             if custID != '':
                 customer = Customer.objects.all().filter(cust_id=custID)
             else:
@@ -368,58 +373,36 @@ class CustomerOrderPoAPIView(APIView):
                 return Response({'error':'No order with such parameters'}, status=status.HTTP_404_NOT_FOUND)
 
             product = Product.objects.none()
+            quantityList = []
             tempList = []
             # bulding temp list with products from each cart
             for oneOrder in order:
                 cart = Cart.objects.all().filter(order_id=oneOrder.order_id)
                 for oneCart in cart:
-                    tempList.append(oneCart.prod_id)
+                    if oneCart.prod_id.in_stock > 0:
+                        tempList.append(oneCart.prod_id)
+                        quantityList.append(oneCart.quantity)
             # adding all products from the temp list to an empty Query set of Products
             products = product | tempList
 
             serializerCustomer = CustomerSerializer(customer, many=True)
-            serializerOrder = OrderSerializer(order, many=True)
+            #serializerOrder = OrderSerializer(order, many=True)
+            serializerOrder = OrderSerializer(order[0], many=False)
             serializerProduct = ProductSerializer(products, many=True)
 
             poValue, poPiece, poWeight = self.calculatePO(customer, order)
-            measurementsList = []
-            measurementsList.append({'subtotal': poValue})
-            measurementsList.append({'tax': '13%'})
-            measurementsList.append({'total': poValue * 1.13})
-            measurementsList.append({'pieces': poPiece})
-            measurementsList.append({'weight': poValue})
-            serializer = [{'customer' :serializerCustomer.data}, {'order': serializerOrder.data}, {'products' : serializerProduct.data}, {'measurements': measurementsList}]
+            measurementsList = {
+                'subtotal': poValue,
+                'tax': '{0:.2f}'.format(poValue * (int(tax) / 100)),
+                'total': '{0:.2f}'.format(poValue * (1 + int(tax) / 100)),
+                'pieces': poPiece,
+                'weight': poWeight
+            }
+            serializer = [{'customer' :serializerCustomer.data}, {'order': serializerOrder.data}, {'products' : serializerProduct.data}, {'quantities': quantityList}, {'measurements':measurementsList}]
 
             return Response(serializer)
         except Customer.DoesNotExist:
             return Response({'error':'no customer found'}, status=status.HTTP_404_NOT_FOUND)
         except Order.DoesNotExist:
             return Response({'error':'no order found'}, status=status.HTTP_404_NOT_FOUND)
-        # try:
-        #     if first:
-        #         customer = Customer.objects.all().filter(first_name=name)
-        #     else:
-        #         customer = Customer.objects.all().filter(last_name=name)
 
-        #     if customer.count() < 1:
-        #         return Response({'error': 'no such customer'}, status=status.HTTP_404_NOT_FOUND)
-
-        #     if poName is None and orderDate is not None:
-        #         order = Order.objects.all().filter(order_date=orderDate, cust_id=customer[0].cust_id)
-        #     else:
-        #         order = Order.objects.all().filter(po_number=poName, cust_id=customer[0].cust_id)
-
-        #     if order.count() < 1:
-        #         return Response({'error': 'no such order for the given customer'}, status=status.HTTP_404_NOT_FOUND)
-
-        #     serializer_customer = CustomerSerializer(customer, many=True)
-        #     serializer_order = OrderSerializer(order, many=True)
-
-        #     poValue = self.calculatePO(customer, order)
-
-        #     serializer = [serializer_customer.data, serializer_order.data, [{'po' : poValue}]]
-        #     return Response(serializer)
-        # except Customer.DoesNotExist:
-        #     return Response({'error': 'no customer'}, status=status.HTTP_404_NOT_FOUND)
-        # except Order.DoesNotExist:
-        #     return Response({'error': 'no order'}, status=status.HTTP_404_NOT_FOUND)
