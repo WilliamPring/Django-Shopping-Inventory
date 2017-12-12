@@ -166,12 +166,12 @@ class CustomerAPIView(APIView):
     r = re.compile(r'\b\d{3}[-.]?\d{3}[-]\d{4}\b')
     def get(self, request, name, format=None):
         try:
-             Customer.objects.get(first_name=name)
-             #__iexact case insensitive
-             customer = Customer.objects.all().filter(first_name__iexact=name)
-             #expecting many
-             serializer = CustomerSerializer(customer, many = True)
-             return Response(serializer.data)
+            Customer.objects.get(first_name=name)
+            #__iexact case insensitive
+            customer = Customer.objects.all().filter(first_name__iexact=name)
+            #expecting many
+            serializer = CustomerSerializer(customer, many = True)
+            return Response(serializer.data)
         except Customer.DoesNotExist:
             return Response({'error':'no customer found'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -330,32 +330,77 @@ class CustomerOrderPoAPIView(APIView):
                 total += product.price * element.quantity
         return total
 
-    def get(self, request, name, poName=None, orderDate=None, first=True, format=None):
+    #def get(self, request, name=None, poName=None, orderDate=None, first=True, format=None):
+    def get(self, request, orderID=None, custID=None, lastName=None, firstName=None, poNumber=None, orderDate=None, format=None):
+        # print('order id >{}<'.format(orderID))
+        # print('cust id >{}<'.format(custID))
+        # print('last name >{}<'.format(lastName))
+        # print('first name >{}<'.format(firstName))
+        # print('po number >{}<'.format(poNumber))
+        # print('order date >{}<'.format(orderDate))
         try:
-            if first:
-                customer = Customer.objects.all().filter(first_name=name)
+            if custID != '':
+                customer = Customer.objects.all().filter(cust_id=custID)
             else:
-                customer = Customer.objects.all().filter(last_name=name)
-
+                if firstName == '' and lastName == '':
+                    return Response({'error':'no customer info provided'}, status=status.HTTP_400_BAD_REQUEST)
+                elif firstName == '' and lastName != '':
+                    customer = Customer.objects.all().filter(last_name=lastName)
+                elif firstName != '' and lastName == '':
+                    customer = Customer.objects.all().filter(first_name=firstName)
+                else:
+                    customer = Customer.objects.all().filter(first_name=firstName, last_name=lastName)
             if customer.count() < 1:
-                return Response({'error': 'no such customer'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'error':'No customer with such parameters'}, status=status.HTTP_404_NOT_FOUND)
 
-            if poName is None and orderDate is not None:
-                order = Order.objects.all().filter(order_date=orderDate, cust_id=customer[0].cust_id)
+            if orderID !='':
+                order = Order.objects.all().filter(order_id=orderID)
             else:
-                order = Order.objects.all().filter(po_number=poName, cust_id=customer[0].cust_id)
-
+                if poNumber == '' and orderDate == '':
+                    return Response({'error':'no order info provided'}, status=status.HTTP_400_BAD_REQUEST)
+                elif poNumber != '' and orderDate == '':
+                    order = Order.objects.all().filter(po_number=poNumber)
+                elif poNumber == '' and orderDate != '':
+                    order = Order.objects.all().filter(order_date=orderDate)
+                else:
+                    order = Order.objects.all().filter(order_date=orderDate, po_number=poNumber)
             if order.count() < 1:
-                return Response({'error': 'no such order for the given customer'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'error':'No order with such parameters'}, status=status.HTTP_404_NOT_FOUND)
 
-            serializer_customer = CustomerSerializer(customer, many=True)
-            serializer_order = OrderSerializer(order, many=True)
+            serializerCustomer = CustomerSerializer(customer, many=True)
+            serializerOrder = OrderSerializer(order, many=True)
+            serializer = [serializerCustomer.data, serializerOrder.data]
 
-            poValue = self.calculatePO(customer, order)
-
-            serializer = [serializer_customer.data, serializer_order.data, [{'po' : poValue}]]
             return Response(serializer)
         except Customer.DoesNotExist:
-            return Response({'error': 'no customer'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error':'no customer found'}, status=status.HTTP_404_NOT_FOUND)
         except Order.DoesNotExist:
-            return Response({'error': 'no order'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error':'no order found'}, status=status.HTTP_404_NOT_FOUND)
+        # try:
+        #     if first:
+        #         customer = Customer.objects.all().filter(first_name=name)
+        #     else:
+        #         customer = Customer.objects.all().filter(last_name=name)
+
+        #     if customer.count() < 1:
+        #         return Response({'error': 'no such customer'}, status=status.HTTP_404_NOT_FOUND)
+
+        #     if poName is None and orderDate is not None:
+        #         order = Order.objects.all().filter(order_date=orderDate, cust_id=customer[0].cust_id)
+        #     else:
+        #         order = Order.objects.all().filter(po_number=poName, cust_id=customer[0].cust_id)
+
+        #     if order.count() < 1:
+        #         return Response({'error': 'no such order for the given customer'}, status=status.HTTP_404_NOT_FOUND)
+
+        #     serializer_customer = CustomerSerializer(customer, many=True)
+        #     serializer_order = OrderSerializer(order, many=True)
+
+        #     poValue = self.calculatePO(customer, order)
+
+        #     serializer = [serializer_customer.data, serializer_order.data, [{'po' : poValue}]]
+        #     return Response(serializer)
+        # except Customer.DoesNotExist:
+        #     return Response({'error': 'no customer'}, status=status.HTTP_404_NOT_FOUND)
+        # except Order.DoesNotExist:
+        #     return Response({'error': 'no order'}, status=status.HTTP_404_NOT_FOUND)

@@ -33,6 +33,7 @@ urlpatterns = [
     url(r'^customer-order-po/last/(?P<name>\w+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': False}),
     url(r'^customer-order-po/po/(?P<name>\w+)/(?P<poName>(\w|[-])+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': True}),
     url(r'^customer-order-po/order/(?P<name>\w+)/(?P<orderDate>(\w|[-])+)/$', views.CustomerOrderPoAPIView.as_view(), {'first': False}),
+    url(r'^customer-order-po/orderid/(?P<orderID>.*)/cust/(?P<custID>.*)/last/(?P<lastName>.*)/first/(?P<firstName>.*)/po/(?P<poNumber>.*)/orderdate/(?P<orderDate>.*)/$', views.CustomerOrderPoAPIView.as_view()),
     # product
     url(r'^product/$', views.ProductAPIView.as_view()),
     url(r'^product/(?P<prodName>\w+)/$', views.ProductAPIView.as_view()),
