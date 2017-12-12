@@ -324,11 +324,6 @@ class CustomerOrderAPIView(APIView):
 
 class MultiViewAPIView(APIView):
     def get(self, request, customerField=None, customerValue=None, productField=None, productValue=None, orderField=None, orderValue=None, cartField=None, cartValue=None, format=None):
-        print('Cust {} = {}'.format(customerField, customerValue))
-        print('Prod {} = {}'.format(productField, productValue))
-        print('Order {} = {}'.format(orderField, orderValue))
-        print('Cart {} = {}'.format(cartField, cartValue))
-        
         customerEx = False
         productEx = False
         orderEx = False
