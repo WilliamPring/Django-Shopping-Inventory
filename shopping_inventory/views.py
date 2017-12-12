@@ -13,6 +13,9 @@ import re
 
 
 class CartAPIView(APIView):
+    """
+    Retrieve or post a cart.
+    """
     def get(self, request, prodID, format=None):
         try:
             Cart.objects.filter(prod_id=prodID)
@@ -20,7 +23,7 @@ class CartAPIView(APIView):
             serializer = CartSerializer(cart, many = True)
             return Response(serializer.data, status=status.HTTP_200_OK)
         except Cart.DoesNotExist:
-            raise Http404
+            return Response({'error':'no cart found'}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, format=None):
         serializer = CartSerializer(data=request.data)
@@ -35,6 +38,9 @@ class CartAPIView(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 class OrderAPIView(APIView):
+    """
+    Retrieve, insert, update or delete an order.
+    """
     def get(self, request, orderID, format=None):
         try:
              Order.objects.get(order_id=orderID)
@@ -43,15 +49,15 @@ class OrderAPIView(APIView):
              serializer = OrderSerializer(order, many = True)
              return Response(serializer.data, status=status.HTTP_200_OK)    
         except Order.DoesNotExist:
-            raise Http404
+            return Response({'error':'no order found'}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, format=None):
         #regOrder = re.compile(r'^(0[1-9]|1[012][-](0[1-9]|[12][0-9]|3[01])[-]\d{2})$')
         regOrder = re.compile(r'^((\d{4})[-](0[1-9]|1[012])[-](0[1-9]|[12][0-9]|3[01]))$')
         serializer = OrderSerializer(data=request.data)        
         if serializer.is_valid():
-            if ('cust_id' not in request.data):
-                return Response({'error': 'no specify custID'}, status=status.HTTP_400_BAD_REQUEST)
+            if ('order_id' in request.data):
+                return Response({'error': 'no specify orderID'}, status=status.HTTP_400_BAD_REQUEST)
             # this check is redundant, serializer.is_valid() is going to check for date format regardless
             elif (regOrder.match(str(serializer.validated_data['order_date']))):
                 instance = serializer.save()
@@ -76,7 +82,19 @@ class OrderAPIView(APIView):
                 if ('po_number' not in req):
                     errorMessage +=  "no po_number "
         except Order.DoesNotExist:
-            raise Http404   
+            return Response({'error':'no order found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, format=None):
+        try:
+            orderID = request.data['order_id']
+            order = Order.objects.all().filter(order_id=orderID)
+            if order.count() < 1:
+                return Response({'error': 'no order found'}, status=status.HTTP_404_NOT_FOUND)
+            event = Order.objects.get(order_id=orderID)
+            event.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except KeyError:
+            return Response({'error': 'no order id provided'}, status=status.HTTP_400_BAD_REQUEST)
 
 class CustomerAPIView(APIView):
     """
@@ -93,7 +111,7 @@ class CustomerAPIView(APIView):
              serializer = CustomerSerializer(customer, many = True)
              return Response(serializer.data)
         except Customer.DoesNotExist:
-            raise Http404
+            return Response({'error':'no customer found'}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, format=None):
         serializer = CustomerSerializer(data=request.data)
@@ -122,7 +140,6 @@ class CustomerAPIView(APIView):
             if ('last_name' not in req):
                 errorMessage +=  "no last_name"
             return Response({'error': errorMessage}, status=status.HTTP_400_BAD_REQUEST)
-
         return Response(req, status=status.HTTP_200_OK)
 
     def delete(self, request, name=None, format=None):
@@ -130,12 +147,12 @@ class CustomerAPIView(APIView):
             lastName = request.data['last_name']
             customer = Customer.objects.all().filter(last_name=lastName)
             if customer.count() < 1:
-                return Response({'error': 'not customer found'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'error': 'no customer found'}, status=status.HTTP_404_NOT_FOUND)
             event = Customer.objects.get(last_name=lastName)
             event.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except KeyError:
-            return Response({'error': 'not last name provided'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'no last name provided'}, status=status.HTTP_400_BAD_REQUEST)
 
 class ProductAPIView(APIView):
     """
@@ -162,30 +179,51 @@ class ProductAPIView(APIView):
                     else:
                         raise Product.DoesNotExist
                 except Product.DoesNotExist:
-                    raise Http404
+                    return Response({'error':'no product found'}, status=status.HTTP_404_NOT_FOUND)
         except Product.DoesNotExist:
-            raise Http404 
+            return Response({'error':'no product found'}, status=status.HTTP_404_NOT_FOUND)
 
-    # def get(self, request, soldout, format=None):
-    #     try:
-    #         if soldout.lower() == "no":
-    #             product = Product.objects.all().filter(in_stock__gt=0)
-    #             serializer = ProductSerializer(product, many = True)
-    #             return Response(serializer.data)
-    #         elif soldout.lower() == "yes":
-    #             product = Product.objects.all().filter(in_stock__lte=0)
-    #             serializer = ProductSerializer(product, many = True)
-    #             return Response(serializer.data)
-    #         else:
-    #             raise Product.DoesNotExist
-    #     except Product.DoesNotExist:
-    #         raise Http404 
-    # def post(self, request, format=None):
-    #     serializer = ProductSerializer(data=request.data)
-    #     if serializer.is_valid():
-    #         instance = serializer.save()
-    #         return Response(serializer.data, status=status.HTTP_201_CREATED)
-    #     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    def put(self, request, format=None):
+        req = json.loads(request.body.decode('utf-8'))
+        if ('prod_id' in req) and ('prod_name' in req) and ('price' in req) and ('in_stock' in req) and ('prod_weight' in req):
+            product = Product.objects.select_for_update().filter(prod_id=req['prod_id']).update(prod_name=req['prod_name'], price=req['price'], in_stock=req['in_stock'], prod_weight=req['prod_weight'])
+            if (product <= 0):
+                return Response(product.data)
+        else:
+            errorMessage = ''
+            if ('prod_id' not in req):
+                errorMessage += "no prodID "
+            if ('prod_name' not in req):
+                errorMessage += "no prod name "
+            if ('price' not in req):
+                errorMessage += "no price "
+            if ('in_stock' not in req):
+                errorMessage += "no in stock "
+            if ('prod_weight' not in req):
+                errorMessage += "no prod weight "
+            return Response({'error': errorMessage}, status=status.HTTP_400_BAD_REQUEST)
+
+    def post(self, request, format=None):
+        serializer = ProductSerializer(data=request.data)
+        if serializer.is_valid():
+            if ('prod_id' in request.data):
+                return Response({'error': 'no specify prodID'}, status=status.HTTP_400_BAD_REQUEST)
+            else:
+                instance = serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, format=None):
+        try:
+            prodID = request.data['prod_id']
+            product = Product.objects.all().filter(prod_id=prodID)
+            if product.count() < 1:
+                return Response({'error': 'no product with this id'}, status=status.HTTP_400_BAD_REQUEST)
+            event = Product.objects.get(prod_id=prodID)
+            event.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except KeyError:
+            return Response({'error': 'no prod id provided'}, status=status.HTTP_400_BAD_REQUEST)
 
 class CustomerOrderAPIView(APIView):
     """
@@ -205,9 +243,9 @@ class CustomerOrderAPIView(APIView):
             serializer = [serializer_customer.data, serializer_order.data]
             return Response(serializer)
         except Customer.DoesNotExist:
-            raise Http404
+            return Response({'error':'no customer found'}, status=status.HTTP_404_NOT_FOUND)
         except Order.DoesNotExist:
-            raise Http404
+            return Response({'error':'no order found'}, status=status.HTTP_404_NOT_FOUND)
 
 class CustomerOrderPoAPIView(APIView):
     """
