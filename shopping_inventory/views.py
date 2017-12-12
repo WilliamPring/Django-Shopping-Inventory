@@ -28,14 +28,27 @@ class CartAPIView(APIView):
     def post(self, request, format=None):
         serializer = CartSerializer(data=request.data)
         if serializer.is_valid():
-            product = Product.objects.all().filter(prod_id=serializer.data['prod_id'])
+            product = Product.objects.all().filter(prod_id=serializer.validated_data['prod_id'].prod_id)
             if product.count() < 1:
                 return Response({'error': 'no such product'}, status=status.HTTP_404_NOT_FOUND)
             if product[0].in_stock == 0:
                 return Response({'error': 'product is not in stock'}, status=status.HTTP_400_BAD_REQUEST)
             instance = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        errorMessage = ''
+        if ('order_id' in serializer.errors):
+            errorMessage += 'Issues with order ID '
+        if ('prod_id' in serializer.errors):
+            errorMessage += 'Issues with product ID'
+        if errorMessage == '':
+            errorMessage = serializer.errors
+        return Response({'error':errorMessage}, status=status.HTTP_400_BAD_REQUEST)
+
+    def put(self, request, format=None):
+        try:
+            pass
+        except Card.DoesNotExist:
+            return Response({'error':'No card found'}, status=status.HTTP_404_NOT_FOUND)
 
 class OrderAPIView(APIView):
     """
@@ -54,7 +67,7 @@ class OrderAPIView(APIView):
     def post(self, request, format=None):
         #regOrder = re.compile(r'^(0[1-9]|1[012][-](0[1-9]|[12][0-9]|3[01])[-]\d{2})$')
         regOrder = re.compile(r'^((\d{4})[-](0[1-9]|1[012])[-](0[1-9]|[12][0-9]|3[01]))$')
-        serializer = OrderSerializer(data=request.data)        
+        serializer = OrderSerializer(data=request.data)         
         if serializer.is_valid():
             if ('order_id' in request.data):
                 return Response({'error': 'no specify orderID'}, status=status.HTTP_400_BAD_REQUEST)
@@ -63,17 +76,26 @@ class OrderAPIView(APIView):
                 instance = serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             else:
-                return Response({'error': 'date should be in MM-DD-YY format'}, status=status.HTTP_400_BAD_REQUEST)            
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'date should be in MM-DD-YY format'}, status=status.HTTP_400_BAD_REQUEST)   
+        if ('cust_id' in serializer.errors):
+            return Response({'error': "Issue with the customer ID"}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     #order update
     def put(self, request, format=None):
         try:
             req = json.loads( request.body.decode('utf-8') )
             if ('order_id' in req) and ('po_number' in req):
                 Order.objects.get(order_id=req['order_id'])
-                customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"])
-                if(customer <= 0):
-                    return Response(customer.data)
+                if req['cust_id'] == '' and req['order_date'] == '':
+                    customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"])
+                elif req['cust_id'] != '' and req['order_date'] == '':
+                    customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"], cust_id=req['cust_id'])
+                elif req['cust_id'] == '' and req['order_date'] != '':
+                    customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"], order_date=req['order_date'])
+                else:
+                    customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"], cust_id=req['cust_id'], order_date=req['order_date'])
+                #if(customer <= 0):
+                    #return Response(customer.data)
                 return Response(req, status=status.HTTP_200_OK)
             else: 
                 errorMessage = ""
@@ -82,7 +104,7 @@ class OrderAPIView(APIView):
                 if ('po_number' not in req):
                     errorMessage +=  "no po_number "
         except Order.DoesNotExist:
-            return Response({'error':'no order found'}, status=status.HTTP_404_NOT_FOUND)
+            return Response({'error':'No order found'}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, format=None):
         try:
@@ -128,9 +150,16 @@ class CustomerAPIView(APIView):
     def put(self, request, format=None):
         req = json.loads( request.body.decode('utf-8') )
         if ('cust_id' in req) and ('first_name' in req) and ('last_name' in req):
-            customer = Customer.objects.select_for_update().filter(cust_id=req["cust_id"]).update(first_name = req["first_name"], last_name = req["last_name"])
-            if(customer <= 0):
-                return Response(customer.data)
+            if req["phone_number"] == '':
+                customer = Customer.objects.select_for_update().filter(cust_id=req["cust_id"]).update(first_name = req["first_name"], last_name = req["last_name"])
+            else:
+                if self.r.match(req['phone_number']):
+                    customer = Customer.objects.select_for_update().filter(cust_id=req["cust_id"]).update(first_name = req["first_name"], last_name = req["last_name"], phone_number=req["phone_number"])
+                else:
+                    return Response({'error': 'Invalid phone number format'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(req, status=status.HTTP_200_OK)
+            #if(customer <= 0):
+            #    return Response(customer.data)
         else:
             errorMessage = ""
             if ('cust_id' not in req):
@@ -140,7 +169,6 @@ class CustomerAPIView(APIView):
             if ('last_name' not in req):
                 errorMessage +=  "no last_name"
             return Response({'error': errorMessage}, status=status.HTTP_400_BAD_REQUEST)
-        return Response(req, status=status.HTTP_200_OK)
 
     def delete(self, request, name=None, format=None):
         try:
@@ -187,8 +215,9 @@ class ProductAPIView(APIView):
         req = json.loads(request.body.decode('utf-8'))
         if ('prod_id' in req) and ('prod_name' in req) and ('price' in req) and ('in_stock' in req) and ('prod_weight' in req):
             product = Product.objects.select_for_update().filter(prod_id=req['prod_id']).update(prod_name=req['prod_name'], price=req['price'], in_stock=req['in_stock'], prod_weight=req['prod_weight'])
-            if (product <= 0):
-                return Response(product.data)
+            #if (product <= 0):
+                #return Response(product.data)
+            return Response(req, status=status.HTTP_200_OK)
         else:
             errorMessage = ''
             if ('prod_id' not in req):
@@ -211,7 +240,7 @@ class ProductAPIView(APIView):
             else:
                 instance = serializer.save()
             return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 
     def delete(self, request, format=None):
         try:
