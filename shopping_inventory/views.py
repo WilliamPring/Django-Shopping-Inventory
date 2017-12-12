@@ -46,9 +46,36 @@ class CartAPIView(APIView):
 
     def put(self, request, format=None):
         try:
-            pass
-        except Card.DoesNotExist:
+            req = json.loads(request.body.decode('utf-8'))
+            if ('order_id' in req) and (req['order_id'] != '') and ('prod_id' in req) and (req['prod_id'] != ''):
+                if ('quantity' in req) and (req['quantity'] != ''):
+                    cart = Cart.objects.select_for_update().filter(order_id=req['order_id'], prod_id=req['prod_id']).update(quantity=req['quantity'])
+                    return Response(req, status=status.HTTP_200_OK)
+                return Response(req, status=status.HTTP_204_NO_CONTENT)
+            else:
+                errorMessage = ''
+                if ('order_id' not in req) or (req['order_id'] == ''):
+                    errorMessage += "No order_id "
+                if ('prod_id' not in req) or (req['prod_id'] == ''):
+                    errorMessage += "No prod_id "
+                return Response({'error': errorMessage}, status=status.HTTP_400_BAD_REQUEST)
+        except Cart.DoesNotExist:
             return Response({'error':'No card found'}, status=status.HTTP_404_NOT_FOUND)
+        except ValueError:
+            return Response({'error':'Invalid input value'}, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, format=None):
+        try:
+            orderID = request.data['order_id']
+            prodID = request.data['prod_id']
+            cart = Cart.objects.all().filter(order_id=orderID, prod_id=prodID)
+            if cart.count() < 1:
+                return Response({'error': 'No cart found'}, status=status.HTTP_404_NOT_FOUND)
+            event = Cart.objects.get(order_id=orderID, prod_id=prodID)
+            event.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except KeyError:
+            return Response({'error': 'No IDs provided'}, status=status.HTTP_400_BAD_REQUEST)
 
 class OrderAPIView(APIView):
     """
@@ -188,12 +215,12 @@ class CustomerAPIView(APIView):
             lastName = request.data['last_name']
             customer = Customer.objects.all().filter(last_name=lastName)
             if customer.count() < 1:
-                return Response({'error': 'no customer found'}, status=status.HTTP_404_NOT_FOUND)
+                return Response({'error': 'No customer found'}, status=status.HTTP_404_NOT_FOUND)
             event = Customer.objects.get(last_name=lastName)
             event.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except KeyError:
-            return Response({'error': 'no last name provided'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'No last name provided'}, status=status.HTTP_400_BAD_REQUEST)
 
 class ProductAPIView(APIView):
     """
@@ -260,12 +287,12 @@ class ProductAPIView(APIView):
             prodID = request.data['prod_id']
             product = Product.objects.all().filter(prod_id=prodID)
             if product.count() < 1:
-                return Response({'error': 'no product with this id'}, status=status.HTTP_400_BAD_REQUEST)
+                return Response({'error': 'No product with this id'}, status=status.HTTP_400_BAD_REQUEST)
             event = Product.objects.get(prod_id=prodID)
             event.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         except KeyError:
-            return Response({'error': 'no prod id provided'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'No prod id provided'}, status=status.HTTP_400_BAD_REQUEST)
 
 class CustomerOrderAPIView(APIView):
     """
