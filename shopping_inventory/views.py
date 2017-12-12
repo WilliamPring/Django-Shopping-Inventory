@@ -81,28 +81,41 @@ class OrderAPIView(APIView):
             return Response({'error': "Issue with the customer ID"}, status=status.HTTP_400_BAD_REQUEST)
         return Response({'error': serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
     #order update
+
+    def customerExists(self, customerID):
+        customer = Customer.objects.all().filter(cust_id=customerID)
+        if customer.count() < 1:
+            return False
+        else:
+            return True
+
     def put(self, request, format=None):
-        try:
+        try:    
             req = json.loads( request.body.decode('utf-8') )
-            if ('order_id' in req) and ('po_number' in req):
+            if ('order_id' in req) and ('po_number' in req) and (req['order_id'] != '') and (req['po_number'] != ''):
                 Order.objects.get(order_id=req['order_id'])
                 if req['cust_id'] == '' and req['order_date'] == '':
                     customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"])
                 elif req['cust_id'] != '' and req['order_date'] == '':
+                    if not self.customerExists(req['cust_id']):
+                        return Response({'error':'No customer found'}, status=status.HTTP_404_NOT_FOUND)
                     customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"], cust_id=req['cust_id'])
                 elif req['cust_id'] == '' and req['order_date'] != '':
                     customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"], order_date=req['order_date'])
                 else:
+                    if not self.customerExists(req['cust_id']):
+                        return Response({'error':'No customer found'}, status=status.HTTP_404_NOT_FOUND)
                     customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"], cust_id=req['cust_id'], order_date=req['order_date'])
                 #if(customer <= 0):
                     #return Response(customer.data)
                 return Response(req, status=status.HTTP_200_OK)
             else: 
                 errorMessage = ""
-                if ('order_id' not in req):
-                    errorMessage += "no order_id "
-                if ('po_number' not in req):
-                    errorMessage +=  "no po_number "
+                if ('order_id' not in req) or (req['order_id'] == ''):
+                    errorMessage += "No order_id "
+                if ('po_number' not in req) or (req['po_number'] == ''):
+                    errorMessage +=  "No po_number "
+                return Response({'error': errorMessage}, status=status.HTTP_400_BAD_REQUEST)
         except Order.DoesNotExist:
             return Response({'error':'No order found'}, status=status.HTTP_404_NOT_FOUND)
 
