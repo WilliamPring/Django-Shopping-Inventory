@@ -98,13 +98,11 @@ class OrderAPIView(APIView):
             return Response({'error':'no order found'}, status=status.HTTP_404_NOT_FOUND)
 
     def post(self, request, format=None):
-        #regOrder = re.compile(r'^(0[1-9]|1[012][-](0[1-9]|[12][0-9]|3[01])[-]\d{2})$')
         regOrder = re.compile(r'^((\d{4})[-](0[1-9]|1[012])[-](0[1-9]|[12][0-9]|3[01]))$')
         serializer = OrderSerializer(data=request.data)         
         if serializer.is_valid():
             if ('order_id' in request.data):
                 return Response({'error': 'no specify orderID'}, status=status.HTTP_400_BAD_REQUEST)
-            # this check is redundant, serializer.is_valid() is going to check for date format regardless
             elif (regOrder.match(str(serializer.validated_data['order_date']))):
                 instance = serializer.save()
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
@@ -139,8 +137,7 @@ class OrderAPIView(APIView):
                     if not self.customerExists(req['cust_id']):
                         return Response({'error':'No customer found'}, status=status.HTTP_404_NOT_FOUND)
                     customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"], cust_id=req['cust_id'], order_date=req['order_date'])
-                #if(customer <= 0):
-                    #return Response(customer.data)
+
                 return Response(req, status=status.HTTP_200_OK)
             else: 
                 errorMessage = ""
@@ -204,8 +201,6 @@ class CustomerAPIView(APIView):
                 else:
                     return Response({'error': 'Invalid phone number format'}, status=status.HTTP_400_BAD_REQUEST)
             return Response(req, status=status.HTTP_200_OK)
-            #if(customer <= 0):
-            #    return Response(customer.data)
         else:
             errorMessage = ""
             if ('cust_id' not in req):
@@ -261,8 +256,6 @@ class ProductAPIView(APIView):
         req = json.loads(request.body.decode('utf-8'))
         if ('prod_id' in req) and ('prod_name' in req) and ('price' in req) and ('in_stock' in req) and ('prod_weight' in req):
             product = Product.objects.select_for_update().filter(prod_id=req['prod_id']).update(prod_name=req['prod_name'], price=req['price'], in_stock=req['in_stock'], prod_weight=req['prod_weight'])
-            #if (product <= 0):
-                #return Response(product.data)
             return Response(req, status=status.HTTP_200_OK)
         else:
             errorMessage = ''
@@ -382,15 +375,12 @@ class MultiViewAPIView(APIView):
         serializer = []
         if customerEx:
             serializerCustomer = CustomerSerializer(customer, many=True)
-            #serializer.append({'customer': serializerCustomer.data})
             serializer.append(serializerCustomer.data)
         if productEx:
             serializerProduct = ProductSerializer(product, many=True)
-            #serializer.append({'product': serializerProduct.data})
             serializer.append(serializerProduct.data)
         if orderEx:
             serializerOreder = OrderSerializer(order, many=True)
-            #serializer.append({'order': serializerOreder.data})
             serializer.append(serializerOreder.data)
 
         return Response(serializer)
@@ -462,7 +452,6 @@ class CustomerOrderPoAPIView(APIView):
             products = product | tempList
 
             serializerCustomer = CustomerSerializer(customer, many=True)
-            #serializerOrder = OrderSerializer(order, many=True)
             serializerOrder = OrderSerializer(order[0], many=False)
             serializerProduct = ProductSerializer(products, many=True)
 
