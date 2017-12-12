@@ -125,16 +125,17 @@ class OrderAPIView(APIView):
             req = json.loads( request.body.decode('utf-8') )
             if ('order_id' in req) and ('po_number' in req) and (req['order_id'] != '') and (req['po_number'] != ''):
                 Order.objects.get(order_id=req['order_id'])
-                if req['cust_id'] == '' and req['order_date'] == '':
+
+                if ('cust_id' not in req or req['cust_id'] == '') and ('order_date' not in req or req['order_date'] == ''):
                     customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"])
-                elif req['cust_id'] != '' and req['order_date'] == '':
-                    if not self.customerExists(req['cust_id']):
+                elif ('cust_id' in req and req['cust_id'] != '') and ('order_date' not in req or req['order_date'] == ''):
+                    if 'cust_id' in req and not self.customerExists(req['cust_id']):
                         return Response({'error':'No customer found'}, status=status.HTTP_404_NOT_FOUND)
                     customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"], cust_id=req['cust_id'])
-                elif req['cust_id'] == '' and req['order_date'] != '':
+                elif ('cust_id' not in req or req['cust_id'] == '') and ('order_date' in req and req['order_date'] != ''):
                     customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"], order_date=req['order_date'])
                 else:
-                    if not self.customerExists(req['cust_id']):
+                    if 'cust_id' in req and not self.customerExists(req['cust_id']):
                         return Response({'error':'No customer found'}, status=status.HTTP_404_NOT_FOUND)
                     customer = Order.objects.select_for_update().filter(order_id=req['order_id']).update(po_number = req["po_number"], cust_id=req['cust_id'], order_date=req['order_date'])
 
@@ -193,10 +194,10 @@ class CustomerAPIView(APIView):
     def put(self, request, format=None):
         req = json.loads( request.body.decode('utf-8') )
         if ('cust_id' in req) and ('first_name' in req) and ('last_name' in req):
-            if req["phone_number"] == '':
+            if ('phone_number' not in req) or req["phone_number"] == '':
                 customer = Customer.objects.select_for_update().filter(cust_id=req["cust_id"]).update(first_name = req["first_name"], last_name = req["last_name"])
             else:
-                if self.r.match(req['phone_number']):
+                if ('phone_number' in req) and self.r.match(req['phone_number']):
                     customer = Customer.objects.select_for_update().filter(cust_id=req["cust_id"]).update(first_name = req["first_name"], last_name = req["last_name"], phone_number=req["phone_number"])
                 else:
                     return Response({'error': 'Invalid phone number format'}, status=status.HTTP_400_BAD_REQUEST)
